@@ -10,9 +10,18 @@ class SokobanLevel
   GOALS = [GOAL, PLAYER_ON_GOAL, BOX_ON_GOAL]
   PLAYERS = [PLAYER, PLAYER_ON_GOAL]
   BOXES = [BOX, BOX_ON_GOAL]
+  UP    = [-1,  0]
+  DOWN  = [ 1,  0]
+  LEFT  = [ 0, -1]
+  RIGHT = [ 0,  1]
+  DELTAS = [UP, DOWN, LEFT, RIGHT]
 
   def self.from_file(filename)
     SokobanLevel.new.read_file(filename)
+  end
+
+  def [](pos)
+    @grid[pos.first][pos.last]
   end
 
   def read_file(filename)
@@ -38,7 +47,53 @@ class SokobanLevel
     end.join("\n")
   end
 
+  def up
+    safe_move(UP)
+  end
+
+  def down
+    safe_move(DOWN)
+  end
+
+  def left
+    safe_move(LEFT)
+  end
+
+  def right
+    safe_move(RIGHT)
+  end
+
   private
+  def can_move?(delta)
+    next_pos = pos_add(@player_pos, delta)
+    next_next_pos = pos_add(next_pos, delta)
+
+    free?(next_pos) || (self[next_pos] == :floor && free?(next_next_pos))
+  end
+
+  def safe_move(delta)
+    move(delta) if can_move?(delta)
+  end
+
+  def move(delta)
+    next_pos = pos_add(@player_pos, delta)
+    next_next_pos = pos_add(next_pos, delta)
+
+    @player_pos = next_pos
+    if @boxes.include?(next_pos)
+      @boxes.delete(next_pos)
+      @boxes << next_next_pos
+    end
+  end
+
+  def pos_add(pos, delta)
+    [pos.first + delta.first, pos.last + delta.last]
+  end
+
+  def free?(pos)
+    (self[pos] == :floor || self[pos] == :goal) && !@boxes.include?(pos)
+  end
+
   def read_line(line, row)
 
     line.each_char.with_index.map do |square, col|
