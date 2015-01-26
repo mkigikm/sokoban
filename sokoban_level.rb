@@ -20,6 +20,12 @@ class SokobanLevel
     SokobanLevel.new.read_file(filename)
   end
 
+  def initialize(grid, player_pos, boxes)
+    @grid = grid
+    @player_pos = player
+    @boxes = boxes
+  end
+
   def [](pos)
     @grid[pos.first][pos.last]
   end
@@ -63,12 +69,16 @@ class SokobanLevel
     safe_move(RIGHT)
   end
 
+  def dup
+    SokobanLevel.new(@grid.dup, @player_pos.dup, @boxes.dup)
+  end
+
   private
   def can_move?(delta)
     next_pos = pos_add(@player_pos, delta)
     next_next_pos = pos_add(next_pos, delta)
 
-    free?(next_pos) || (self[next_pos] == :floor && free?(next_next_pos))
+    free?(next_pos) || (passable?(next_pos) && free?(next_next_pos))
   end
 
   def safe_move(delta)
@@ -91,7 +101,11 @@ class SokobanLevel
   end
 
   def free?(pos)
-    (self[pos] == :floor || self[pos] == :goal) && !@boxes.include?(pos)
+    passable?(pos) && !@boxes.include?(pos)
+  end
+
+  def passable?(pos)
+    self[pos] == :floor || self[pos] == :goal
   end
 
   def read_line(line, row)
