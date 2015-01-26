@@ -18,13 +18,29 @@ class SokobanLevel
   RIGHT = [ 0,  1]
   DELTAS = [UP, DOWN, LEFT, RIGHT]
 
+  attr_reader :boxes, :player_pos
+
   def self.from_file(filename)
     SokobanLevel.new.read_file(filename)
   end
 
-  def initialize(grid=nil, player_pos=nil, boxes=nil)
+  def ==(level)
+    return false unless level.is_a?(self.class)
+    @player_pos == level.player_pos && @boxes == level.boxes
+  end
+
+  def eql?(level)
+    self == level
+  end
+
+  def hash
+    [@player_pos, @boxes].hash
+  end
+
+  def initialize(grid=nil, player_pos=nil, goals=nil, boxes=nil)
     @grid = grid
     @player_pos = player_pos
+    @goals = goals
     @boxes = boxes
   end
 
@@ -60,20 +76,36 @@ class SokobanLevel
     safe_move(UP)
   end
 
+  def up?
+    can_move?(UP)
+  end
+
   def down
     safe_move(DOWN)
+  end
+
+  def down?
+    can_move?(DOWN)
   end
 
   def left
     safe_move(LEFT)
   end
 
+  def left?
+    can_move?(LEFT)
+  end
+
   def right
     safe_move(RIGHT)
   end
 
+  def right?
+    can_move?(RIGHT)
+  end
+
   def dup
-    SokobanLevel.new(@grid.dup, @player_pos.dup, @boxes.dup)
+    SokobanLevel.new(@grid.dup, @player_pos.dup, @goals.dup, @boxes.dup)
   end
 
   def win?
