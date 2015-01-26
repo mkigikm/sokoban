@@ -1,3 +1,5 @@
+require 'set'
+
 class SokobanLevel
   BOX = "$"
   PLAYER = "@"
@@ -20,9 +22,9 @@ class SokobanLevel
     SokobanLevel.new.read_file(filename)
   end
 
-  def initialize(grid, player_pos, boxes)
+  def initialize(grid=nil, player_pos=nil, boxes=nil)
     @grid = grid
-    @player_pos = player
+    @player_pos = player_pos
     @boxes = boxes
   end
 
@@ -33,7 +35,8 @@ class SokobanLevel
   def read_file(filename)
     lines = File.readlines(filename).map(&:chomp)
 
-    @boxes = []
+    @boxes = Set.new([])
+    @goals = Set.new([])
     @grid = lines.each_with_index.map { |line, row| read_line(line, row) }
 
     self
@@ -71,6 +74,10 @@ class SokobanLevel
 
   def dup
     SokobanLevel.new(@grid.dup, @player_pos.dup, @boxes.dup)
+  end
+
+  def win?
+    (@goals - @boxes).empty?
   end
 
   private
@@ -118,6 +125,7 @@ class SokobanLevel
       if square == WALL
         :wall
       elsif GOALS.include?(square)
+        @goals << pos
         :goal
       else
         :floor

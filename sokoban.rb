@@ -8,9 +8,14 @@ class SokobanDisplay
     @level = level
   end
 
+  def level_string
+    status = @level.win? ? "Win" : ""
+    "#{@level.to_s}\n#{status}"
+  end
+
   def run
     Dispel::Screen.open do |screen|
-      screen.draw @level.to_s
+      screen.draw level_string
 
       Dispel::Keyboard.output do |key|
         case key
@@ -20,10 +25,10 @@ class SokobanDisplay
         when :up then @level.up
         when :down then @level.down
         end
-        screen.draw(@level.to_s)
+        screen.draw level_string
       end
 
-      screen.draw(@level.to_s)
+      screen.draw level_string
     end
   end
 end
