@@ -10,7 +10,18 @@ class SokobanDisplay
 
   def level_string
     status = @level.win? ? "Win" : ""
-    "#{@level.to_s}\n#{status}"
+    "#{@level.to_s}\n#{status}\n#{history_string}"
+  end
+
+  def history_string
+    @level.history.map do |direction|
+      case direction
+      when :up    then "U"
+      when :down  then "D"
+      when :left  then "L"
+      when :right then "R"
+      end
+    end.join("")
   end
 
   def run
@@ -20,10 +31,11 @@ class SokobanDisplay
       Dispel::Keyboard.output do |key|
         case key
         when "q" then break
-        when :left then @level.left
-        when :right then @level.right
-        when :up then @level.up
-        when :down then @level.down
+        when "r" then @level.restart
+        when :left then @level.move(:left)
+        when :right then @level.move(:right)
+        when :up then @level.move(:up)
+        when :down then @level.move(:down)
         end
         screen.draw level_string
       end

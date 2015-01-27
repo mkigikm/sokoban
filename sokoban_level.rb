@@ -17,31 +17,21 @@ class SokobanLevel
   LEFT  = [ 0, -1]
   RIGHT = [ 0,  1]
   DELTAS = [UP, DOWN, LEFT, RIGHT]
+  DIRECTIONS = {
+    up:    UP,
+    down:  DOWN,
+    left:  LEFT,
+    right: RIGHT
+  }
 
-  attr_reader :boxes, :player_pos
+  attr_reader :boxes, :player_pos, :history
 
   def self.from_file(filename)
     SokobanLevel.new.read_file(filename)
   end
 
-  def ==(level)
-    return false unless level.is_a?(self.class)
-    @player_pos == level.player_pos && @boxes == level.boxes
-  end
-
-  def eql?(level)
-    self == level
-  end
-
-  def hash
-    [@player_pos, @boxes].hash
-  end
-
-  def initialize(grid=nil, player_pos=nil, goals=nil, boxes=nil)
-    @grid = grid
-    @player_pos = player_pos
-    @goals = goals
-    @boxes = boxes
+  def initialize
+    @history = []
   end
 
   def [](pos)
@@ -51,10 +41,13 @@ class SokobanLevel
   def read_file(filename)
     lines = File.readlines(filename).map(&:chomp)
 
-    @boxes = Set.new([])
+    @boxes = []
     @goals = Set.new([])
-    @grid = lines.each_with_index.map { |line, row| read_line(line, row) }
+    @grid = lines.each_with_index.map do
+      |line, row| read_line(line, row)
+    end
 
+    setup_start
     self
   end
 
@@ -65,74 +58,47 @@ class SokobanLevel
 
         case square
         when :wall then WALL
-        when :goal then display_goal(square, pos)
         when :floor then display_floor(square, pos)
         end
       end.join
     end.join("\n")
   end
 
-  def up
-    safe_move(UP)
-  end
-
-  def up?
-    can_move?(UP)
-  end
-
-  def down
-    safe_move(DOWN)
-  end
-
-  def down?
-    can_move?(DOWN)
-  end
-
-  def left
-    safe_move(LEFT)
-  end
-
-  def left?
-    can_move?(LEFT)
-  end
-
-  def right
-    safe_move(RIGHT)
-  end
-
-  def right?
-    can_move?(RIGHT)
-  end
-
-  def dup
-    SokobanLevel.new(@grid.dup, @player_pos.dup, @goals.dup, @boxes.dup)
+  def move(direction)
+    if can_move?(DIRECTIONS[direction])
+      history << direction
+      _move(DIRECTIONS[direction])
+    end
   end
 
   def win?
     (@goals - @boxes).empty?
   end
 
+  def restart
+    @player = @player_start.dup
+    @boxes = @boxes_start.map { |pos| pos.dup }
+    @history = []
+  end
+
   private
   def can_move?(delta)
-    next_pos = pos_add(@player_pos, delta)
+    next_pos = pos_add(@player, delta)
     next_next_pos = pos_add(next_pos, delta)
 
-    free?(next_pos) || (passable?(next_pos) && free?(next_next_pos))
+    free?(next_pos) || self[next_pos] == :floor && free?(next_next_pos)
   end
 
-  def safe_move(delta)
-    move(delta) if can_move?(delta)
+  def _move(delta)
+    pos_add!(@player, delta)
+
+    box_idx = @boxes.index(@player)
+    pos_add!(@boxes[box_idx], delta) if box_idx
   end
 
-  def move(delta)
-    next_pos = pos_add(@player_pos, delta)
-    next_next_pos = pos_add(next_pos, delta)
-
-    @player_pos = next_pos
-    if @boxes.include?(next_pos)
-      @boxes.delete(next_pos)
-      @boxes << next_next_pos
-    end
+  def pos_add!(pos, delta)
+    pos[0] += delta[0]
+    pos[1] += delta[1]
   end
 
   def pos_add(pos, delta)
@@ -140,48 +106,37 @@ class SokobanLevel
   end
 
   def free?(pos)
-    passable?(pos) && !@boxes.include?(pos)
-  end
-
-  def passable?(pos)
-    self[pos] == :floor || self[pos] == :goal
+    self[pos] == :floor && !@boxes.include?(pos)
   end
 
   def read_line(line, row)
 
     line.each_char.with_index.map do |square, col|
       pos = [row, col]
-      @boxes << pos if BOXES.include?(square)
-      @player_pos = pos if PLAYERS.include?(square)
+      @boxes << pos.dup if BOXES.include?(square)
+      @player = pos if PLAYERS.include?(square)
+      @goals << pos if GOALS.include?(square)
 
-      if square == WALL
-        :wall
-      elsif GOALS.include?(square)
-        @goals << pos
-        :goal
-      else
-        :floor
-      end
-    end
-  end
-
-  def display_goal(square, pos)
-    if @player_pos == pos
-      PLAYER_ON_GOAL
-    elsif @boxes.include?(pos)
-      BOX_ON_GOAL
-    else
-      GOAL
+      square == WALL ? :wall : :floor
     end
   end
 
   def display_floor(square, pos)
-    if @player_pos == pos
-      PLAYER
+    if @player == pos
+      @goals.include?(pos) ? PLAYER_ON_GOAL : PLAYER
     elsif @boxes.include?(pos)
-      BOX
+      @goals.include?(pos) ? BOX_ON_GOAL : BOX
+    elsif @goals.include?(pos)
+      GOAL
     else
       FLOOR
     end
+  end
+
+  def setup_start
+    @player_start = @player.dup
+    @player_start.freeze
+    @boxes_start = @boxes.map { |pos| pos.dup.freeze }
+    @boxes_start.freeze
   end
 end
