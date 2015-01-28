@@ -1,66 +1,102 @@
 require 'set'
 require './sokoban_level'
 
-class SokobanNode
-  attr_reader :level, :move, :depth
-
-  def initialize(level, move=nil, depth=0)
-    @level = level
-    @move = move
-    @depth = depth
-  end
-
-  def children
-    moves = [:up?, :down?, :left?, :right?].zip([:up, :down, :left, :right])
-
-    moves.select! { |direction| @level.send(direction.first) }
-    moves.map do |direction|
-      new_level = @level.dup
-      new_level.send(direction.last)
-      SokobanNode.new(new_level, direction.last, depth + 1)
-    end
-  end
+class SokoNode
+  attr_reader :level, :move, :depth, :history
 
   def self.solve_from_file(filename)
-    level = SokobanLevel.from_file(filename)
+    level = SokoLevel.from_file(filename)
 
     solve(level)
   end
 
+  def initialize(level, history=[], depth=0)
+    @level = level
+    @history = history
+    @depth = depth
+  end
+
+  def children_or_win
+    # first we apply the history to the current level
+    apply_history
+
+    # short circuit if we found the goal
+    return :win if level.win?
+
+    # then we select the moves that can be applied from the
+    # current position
+    next_moves = SokoLevel::DELTAS.select do |dir|
+      level.can_move?(dir)
+    end
+
+    # then we make a node for each of the possible moves
+    children = next_moves.map do |dir|
+      next_history = history.dup
+      next_history << dir
+      SokoNode.new(level, next_history, depth + 1)
+    end
+
+    # finally reset the level
+    level.restart
+    children
+  end
+
+  def apply_history
+    history.each { |dir| level.move!(dir) }
+  end
+
+  # two nodes are equal if after applying all the moves the boxes
+  # and player are in the same positions
+  def ==(node)
+    return false unless node.is_a?(SokoNode)
+
+    hash == node.hash
+  end
+
+  def eql?(node)
+    self == node
+  end
+
+  def hash
+    apply_history
+    hash = [level.player, level.boxes].hash
+    level.restart
+
+    hash
+  end
+
   def self.solve(level)
-    root = SokobanNode.new(level)
+    root = SokoNode.new(level)
     queue = [root]
-    visited = Set.new([level])
-    parents = {}
+    visited = Set.new([root])
     depths = Set.new
     pruned = 0
 
     until queue.empty?
       current = queue.shift
+
       unless depths.include?(current.depth)
         puts "Reached depth #{current.depth}"
         depths << current.depth
       end
-      break if current.level.win?
-      current.children.each do |child|
-        if !visited.include?(child.level)
+
+      children = current.children_or_win
+      break if children == :win
+
+      children.each do |child|
+        if !visited.include?(child)
           queue << child
-          parents[child] = current
-          visited << child.level
-        else
-          pruned += 1
+          visited << child
+        # else
+        #   pruned += 1
+        #   puts "Pruned #{pruned}" if pruned % 10000 == 0
         end
       end
+
+      #puts "visted #{visited.count}" if visited.count % 10000 == 0
     end
 
-    puts "pruned #{pruned}"
-
-    moves = []
-    until current == root
-      moves << current.move
-      current = parents[current]
-    end
-
-    moves.reverse
+    # puts "pruned #{pruned}"
+    current.history.map { |move| SokoLevel::DIRS.invert[move] }
   end
 end
