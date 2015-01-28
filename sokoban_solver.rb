@@ -13,6 +13,28 @@ class SokoNode
     solve(level)
   end
 
+  # future notes:
+  # implement a "dead space" calculation that
+  # 1. removes all boxes from the level
+  # 2. for every square on the level
+  #    1. puts a box there
+  #    2. puts the player at adjacent spaces
+  #    3. if the player cannot push the box to any goal from any space
+  #       adds it to dead space where it knows to reject nodes that
+  #       have a box in this space
+  #
+  # seperately can implement a "stuck" calculation that looks for
+  # simple box formations that are unsolvable such as two boxes beside
+  # each other on a wall that aren't on goals, 4 boxes in a square
+  # formation not on goals, and boxes in corners not on goals
+  #
+  # more complicated stuck patterns I'm sure exist, but could be a
+  # hard problem by themselves
+  #
+  # also, I'm not sure my move and undo method is any faster than
+  # copying. will have to benchmark later, too bad I overwrote the
+  # old one, but I could look at git history or just reimplement it,
+  # it isn't that hard :)
   def initialize(level, history=[], depth=0)
     @level = level
     @history = history
@@ -25,6 +47,10 @@ class SokoNode
 
     # short circuit if we found the goal
     return :win if level.win?
+
+    # future notes:
+    # add nodes for any push moves
+    # then add nodes that come from SokoMazeSolver
 
     # then we select the moves that can be applied from the
     # current position
@@ -60,6 +86,12 @@ class SokoNode
     self == node
   end
 
+  # two nodes are hash equal iff
+  # 1. their boxes are in the same position
+  # 2. their players are at the same position
+  # they may have taken different paths here, but we only care about
+  # the one that came by a shorter path, which will be reflected by
+  # the order the algorithm explores them
   def hash
     apply_history
     hash = [level.player, level.boxes].hash
@@ -75,6 +107,11 @@ class SokoNode
     depths = Set.new
     pruned = 0
 
+    # future notes:
+    # queue needs to be a priority queue that looks at
+    # history.count. among those it could also have a heuristic
+    # for calculating most promising node, but that's overkill
+    # for now
     until queue.empty?
       current = queue.shift
 
