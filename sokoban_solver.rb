@@ -1,7 +1,10 @@
 require 'set'
 require './sokoban_level'
+require './maze_solver.rb'
 
 class SokoNode
+  include MazeSolver
+
   attr_reader :level, :move, :depth, :history
 
   def self.solve_from_file(filename)

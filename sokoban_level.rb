@@ -13,17 +13,6 @@ class SokoLevel
   GOALS = [GOAL, PLAYER_ON_GOAL, BOX_ON_GOAL]
   PLAYERS = [PLAYER, PLAYER_ON_GOAL]
   BOXES = [BOX, BOX_ON_GOAL]
-  UP    = [-1,  0]
-  DOWN  = [ 1,  0]
-  LEFT  = [ 0, -1]
-  RIGHT = [ 0,  1]
-  DELTAS = [UP, DOWN, LEFT, RIGHT]
-  DIRS = {
-    up:    UP,
-    down:  DOWN,
-    left:  LEFT,
-    right: RIGHT
-  }
 
   include OrderedPairs
 
@@ -39,6 +28,10 @@ class SokoLevel
 
   def [](pos)
     @grid[pos.first][pos.last]
+  end
+
+  def size
+    [@grid.count, @grid.first.count]
   end
 
   def read_file(filename)
@@ -65,6 +58,10 @@ class SokoLevel
         end
       end.join
     end.join("\n")
+  end
+
+  def inspect
+    "\n#{to_s}"
   end
 
   def can_move?(delta)
