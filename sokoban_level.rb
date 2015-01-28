@@ -18,7 +18,7 @@ class SokoLevel
   LEFT  = [ 0, -1]
   RIGHT = [ 0,  1]
   DELTAS = [UP, DOWN, LEFT, RIGHT]
-  DIRECTIONS = {
+  DIRS = {
     up:    UP,
     down:  DOWN,
     left:  LEFT,
@@ -35,7 +35,6 @@ class SokoLevel
 
   def initialize
     @history = []
-    @history_push = []
   end
 
   def [](pos)
@@ -68,10 +67,10 @@ class SokoLevel
     end.join("\n")
   end
 
-  def move(direction)
-    if can_move?(DIRECTIONS[direction])
-      history << direction
-      _move(DIRECTIONS[direction])
+  def move(dir)
+    if can_move?(DIRS[dir])
+      undo_push = _move(DIRS[dir])
+      history << [dir, undo_push]
       true
     else
       false
@@ -80,8 +79,8 @@ class SokoLevel
 
   def undo
     if !history.empty?
-      direction = history.pop
-      _undo(DIRECTIONS[direction])
+      dir, undo_push = history.pop
+      _undo(DIRS[dir], undo_push)
       true
     else
       false
@@ -96,7 +95,6 @@ class SokoLevel
     @player = @player_start.dup
     @boxes = @boxes_start.map { |pos| pos.dup }
     @history = []
-    @history_push = []
   end
 
   private
@@ -112,16 +110,13 @@ class SokoLevel
     pos_add!(@player, delta)
 
     box_idx = @boxes.index(@player)
-    if box_idx
-      @history_push << true
-      pos_add!(@boxes[box_idx], delta) if box_idx
-    else
-      @history_push << false
-    end
+    pos_add!(@boxes[box_idx], delta) if box_idx
+
+    !box_idx.nil?
   end
 
-  def _undo(delta)
-    if @history_push.pop
+  def _undo(delta, undo_push)
+    if undo_push
       box_idx = @boxes.index(pos_add(@player, delta))
       pos_sub!(@boxes[box_idx], delta)
     end

@@ -14,13 +14,15 @@ class SokoDisplay
   end
 
   def history_string
-    @level.history.map do |direction|
-      case direction
-      when :up    then "U"
-      when :down  then "D"
-      when :left  then "L"
-      when :right then "R"
+    @level.history.map do |(dir, push)|
+      char = case dir
+      when :up    then "u"
+      when :down  then "d"
+      when :left  then "l"
+      when :right then "r"
       end
+
+      push ? char.upcase : char
     end.join("").gsub(/(.{10})/, "\\1\n")
   end
 
