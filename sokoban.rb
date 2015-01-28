@@ -26,9 +26,13 @@ class SokoDisplay
     end.join("").gsub(/(.{10})/, "\\1\n")
   end
 
+  def display_level(screen)
+    screen.draw level_string
+  end
+
   def run
     Dispel::Screen.open do |screen|
-      screen.draw level_string
+      display_level(screen)
 
       Dispel::Keyboard.output do |key|
         case key
@@ -40,10 +44,8 @@ class SokoDisplay
         when :up then @level.move(:up)
         when :down then @level.move(:down)
         end
-        screen.draw level_string
+        display_level(screen)
       end
-
-      screen.draw level_string
     end
   end
 end
