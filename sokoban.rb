@@ -3,7 +3,7 @@
 require './sokoban_level.rb'
 require 'dispel'
 
-class SokobanDisplay
+class SokoDisplay
   def initialize(level)
     @level = level
   end
@@ -21,7 +21,7 @@ class SokobanDisplay
       when :left  then "L"
       when :right then "R"
       end
-    end.join("")
+    end.join("").gsub(/(.{10})/, "\\1\n")
   end
 
   def run
@@ -32,6 +32,7 @@ class SokobanDisplay
         case key
         when "q" then break
         when "r" then @level.restart
+        when "u" then @level.undo
         when :left then @level.move(:left)
         when :right then @level.move(:right)
         when :up then @level.move(:up)
@@ -46,7 +47,7 @@ class SokobanDisplay
 end
 
 if __FILE__ == $PROGRAM_NAME
-  level = SokobanLevel.from_file(ARGV.shift)
-  display = SokobanDisplay.new(level)
+  level = SokoLevel.from_file(ARGV.shift)
+  display = SokoDisplay.new(level)
   display.run
 end

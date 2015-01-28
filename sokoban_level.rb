@@ -1,6 +1,7 @@
 require 'set'
+require_relative 'ordered_pairs'
 
-class SokobanLevel
+class SokoLevel
   BOX = "$"
   PLAYER = "@"
   PLAYER_ON_GOAL = "+"
@@ -24,14 +25,17 @@ class SokobanLevel
     right: RIGHT
   }
 
-  attr_reader :boxes, :player_pos, :history
+  include OrderedPairs
+
+  attr_reader :boxes, :player, :history
 
   def self.from_file(filename)
-    SokobanLevel.new.read_file(filename)
+    SokoLevel.new.read_file(filename)
   end
 
   def initialize
     @history = []
+    @history_push = []
   end
 
   def [](pos)
@@ -43,8 +47,8 @@ class SokobanLevel
 
     @boxes = []
     @goals = Set.new([])
-    @grid = lines.each_with_index.map do
-      |line, row| read_line(line, row)
+    @grid = lines.each_with_index.map do |line, row|
+      read_line(line, row)
     end
 
     setup_start
@@ -68,6 +72,19 @@ class SokobanLevel
     if can_move?(DIRECTIONS[direction])
       history << direction
       _move(DIRECTIONS[direction])
+      true
+    else
+      false
+    end
+  end
+
+  def undo
+    if !history.empty?
+      direction = history.pop
+      _undo(DIRECTIONS[direction])
+      true
+    else
+      false
     end
   end
 
@@ -79,6 +96,7 @@ class SokobanLevel
     @player = @player_start.dup
     @boxes = @boxes_start.map { |pos| pos.dup }
     @history = []
+    @history_push = []
   end
 
   private
@@ -86,23 +104,29 @@ class SokobanLevel
     next_pos = pos_add(@player, delta)
     next_next_pos = pos_add(next_pos, delta)
 
-    free?(next_pos) || self[next_pos] == :floor && free?(next_next_pos)
+    free?(next_pos) ||
+      self[next_pos] == :floor && free?(next_next_pos)
   end
 
   def _move(delta)
     pos_add!(@player, delta)
 
     box_idx = @boxes.index(@player)
-    pos_add!(@boxes[box_idx], delta) if box_idx
+    if box_idx
+      @history_push << true
+      pos_add!(@boxes[box_idx], delta) if box_idx
+    else
+      @history_push << false
+    end
   end
 
-  def pos_add!(pos, delta)
-    pos[0] += delta[0]
-    pos[1] += delta[1]
-  end
+  def _undo(delta)
+    if @history_push.pop
+      box_idx = @boxes.index(pos_add(@player, delta))
+      pos_sub!(@boxes[box_idx], delta)
+    end
 
-  def pos_add(pos, delta)
-    [pos.first + delta.first, pos.last + delta.last]
+    pos_sub!(@player, delta)
   end
 
   def free?(pos)
@@ -110,9 +134,9 @@ class SokobanLevel
   end
 
   def read_line(line, row)
-
     line.each_char.with_index.map do |square, col|
       pos = [row, col]
+
       @boxes << pos.dup if BOXES.include?(square)
       @player = pos if PLAYERS.include?(square)
       @goals << pos if GOALS.include?(square)
