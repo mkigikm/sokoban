@@ -72,6 +72,13 @@ class SokoLevel
       self[next_pos] == :floor && free?(next_next_pos)
   end
 
+  def can_push?(delta)
+    next_pos = pos_add(@player, delta)
+    next_next_pos = pos_add(next_pos, delta)
+
+    @boxes.include?(next_pos) && free?(next_next_pos)
+  end
+
   def move(dir)
     if can_move?(DIRS[dir])
       undo_push = move!(DIRS[dir])
@@ -94,11 +101,20 @@ class SokoLevel
   def undo
     if !history.empty?
       dir, undo_push = history.pop
-      _undo(DIRS[dir], undo_push)
+      undo!(DIRS[dir], undo_push)
       true
     else
       false
     end
+  end
+
+  def undo!(delta, undo_push)
+    if undo_push
+      box_idx = @boxes.index(pos_add(@player, delta))
+      pos_sub!(@boxes[box_idx], delta)
+    end
+
+    pos_sub!(@player, delta)
   end
 
   def win?
@@ -112,15 +128,6 @@ class SokoLevel
   end
 
   private
-  def _undo(delta, undo_push)
-    if undo_push
-      box_idx = @boxes.index(pos_add(@player, delta))
-      pos_sub!(@boxes[box_idx], delta)
-    end
-
-    pos_sub!(@player, delta)
-  end
-
   def free?(pos)
     self[pos] == :floor && !@boxes.include?(pos)
   end

@@ -1,11 +1,11 @@
 require 'set'
 require './sokoban_level'
 require './maze_solver.rb'
+require 'pqueue'
+require 'byebug'
 
 class SokoNode
-  include MazeSolver
-
-  attr_reader :level, :move, :depth, :history
+  attr_reader :level, :move, :history
 
   def self.solve_from_file(filename)
     level = SokoLevel.from_file(filename)
@@ -35,10 +35,9 @@ class SokoNode
   # copying. will have to benchmark later, too bad I overwrote the
   # old one, but I could look at git history or just reimplement it,
   # it isn't that hard :)
-  def initialize(level, history=[], depth=0)
+  def initialize(level, history=[])
     @level = level
     @history = history
-    @depth = depth
   end
 
   def children_or_win
@@ -62,12 +61,51 @@ class SokoNode
     children = next_moves.map do |dir|
       next_history = history.dup
       next_history << dir
-      SokoNode.new(level, next_history, depth + 1)
+      SokoNode.new(level, next_history)
     end
 
     # finally reset the level
     level.restart
     children
+  end
+
+  def push_children
+    apply_history
+
+    next_pushes = SokoLevel::DELTAS.select do |dir|
+      level.can_push?(dir)
+    end
+
+    children = next_pushes.map do |push|
+      level.move!(push)
+      return [true, history + [push]] if level.win?
+      level.undo!(push, true)
+
+      SokoNode.new(level, history + [push])
+    end
+
+    level.restart
+    [false, children]
+  end
+
+  def travel_children(visited)
+    apply_history
+
+    solver = SokoMazeSolver.new(level)
+    #goal_count = solver.goals.count
+    solver.goals.delete_if do |goal|
+      visited.include?([goal, level.boxes].hash)
+    end
+    #pruned = goal_count - solver.goals.count
+    #puts "pruned #{pruned}" if pruned > 0
+
+    paths = solver.solve.map do |(goal, path)|
+      visited << [goal, level.boxes].hash
+      SokoNode.new(level, history + path)
+    end
+
+    level.restart
+    paths
   end
 
   def apply_history
@@ -100,11 +138,46 @@ class SokoNode
     hash
   end
 
+  def self.solve_pqueue(level)
+    root = SokoNode.new(level)
+    queue = PQueue.new([root]) do |x, y|
+      y.history.count <=> x.history.count
+    end
+    visited = Set.new([[level.player, level.boxes].hash])
+    max_depth = 0
+
+    until queue.empty?
+      cur = queue.pop
+      #puts "depth=#{cur.history.count}"
+
+      #debugger
+      depth = cur.history.count
+      if depth > max_depth
+        #puts "Reached #{depth}"
+        max_depth = depth
+      end
+      push_win, children = cur.push_children
+      if push_win
+        winning_moves = children
+        break
+      end
+
+      children.concat(cur.travel_children(visited))
+
+      children.each do |child|
+        queue << child
+        visited << child
+      end
+    end
+
+    winning_moves.map { |delta| SokoLevel::DIRS.invert[delta] }
+  end
+
+
   def self.solve(level)
     root = SokoNode.new(level)
     queue = [root]
     visited = Set.new([root])
-    depths = Set.new
     pruned = 0
 
     # future notes:
@@ -114,11 +187,6 @@ class SokoNode
     # for now
     until queue.empty?
       current = queue.shift
-
-      unless depths.include?(current.depth)
-        puts "Reached depth #{current.depth}"
-        depths << current.depth
-      end
 
       children = current.children_or_win
       break if children == :win

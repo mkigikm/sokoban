@@ -4,6 +4,8 @@ require './ordered_pairs'
 class SokoMazeSolver
   include OrderedPairs
 
+  attr_reader :goals
+
   def initialize(level)
     @level = level
     @start = level.player
@@ -63,6 +65,6 @@ class SokoMazeSolver
       pos = @parents[pos]
     end
 
-    path
+    [pos, path]
   end
 end
