@@ -22,8 +22,10 @@ class SokoLevel
     SokoLevel.new.read_file(filename)
   end
 
-  def initialize
-    @history = []
+  def initialize(player=nil, boxes=nil, history=[], grid=nil,
+      player_start=nil, boxes_start=nil, goals=nil)
+    @player, @boxes, @history, @grid = player, boxes, history, grid
+    @player_start, @boxes_start, @goals = player_start, boxes_start, goals
   end
 
   def [](pos)
@@ -47,6 +49,13 @@ class SokoLevel
     self
   end
 
+  # needs to copy @player, @boxes, @history
+  # can pass @grid, @player_start, @boxes_start, @goals
+  def dup
+    SokoLevel.new(@player.dup, @boxes.map { |box| box.dup }, @history.dup,
+      @grid, @player_start, @boxes_start, @goals)
+  end
+
   def to_s
     @grid.each_with_index.collect do |row_squares, row|
       row_squares.each_with_index.collect do |square, col|
@@ -58,6 +67,9 @@ class SokoLevel
         end
       end.join
     end.join("\n")
+  end
+
+  def dup
   end
 
   def inspect

@@ -13,7 +13,7 @@ class SokoMazeSolver
     goals = level.boxes.collect_concat do |box|
       adjacents(box)
     end
-    goals.delete_if { |pos| blocked?(pos) }
+    goals.reject! { |pos| blocked?(pos) }
     @goals = Set.new(goals)
 
     @paths, @queue, @visited = [], [@start], Set.new([@start])
@@ -66,5 +66,25 @@ class SokoMazeSolver
     end
 
     [pos, path]
+  end
+
+  def show_maze
+    rows, cols = @level.size
+
+    rows.times do |row|
+      cols.times do |col|
+        square = [row, col]
+        if square == @start
+          print 'S'
+        elsif @goals.include?(square)
+          print 'G'
+        elsif blocked?(square)
+          print '#'
+        else
+          print ' '
+        end
+      end
+      print "\n"
+    end
   end
 end
